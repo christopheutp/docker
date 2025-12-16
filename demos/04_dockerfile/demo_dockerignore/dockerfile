@@ -1,0 +1,21 @@
+# Image de base
+FROM alpine
+
+LABEL version="0.1"
+
+# définir un répertoire de travail
+WORKDIR /root
+
+# Copie de repertoire courant vers le workdir
+COPY . .
+
+# Lancement d'une commande
+RUN apk update && apk add nano
+
+#definir la commande par défaut
+CMD ["cat","mon_fichier.txt"]
+
+# Construire l'image a partir de ce dockerfile
+# docker build -t myalpine .
+
+# docker run -it myalpine sh
