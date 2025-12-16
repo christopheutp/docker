@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Postes</title>
+    <span th:replace="~{home :: bootstrapImports}"></span>
+</head>
+<body>
+<header>
+    <span th:replace="~{home :: navbar}"></span>
+</header>
+<main class="container">
+<h1>Liste des postes</h1>
+<div th:if="${listPost.isEmpty()}">
+    <h2>Aucun postes</h2>
+    <a class="btn btn-primary" th:href="@{/post/add}">Ajouter un Poste</a>
+</div>
+
+    <div th:if="${!listPost.isEmpty()}" class="row">
+        <div th:each="post : ${listPost}" class="col-sm-6 mb-3 mb-sm-0" >
+            <div class="card">
+                <div class="card-body">
+                    <h5 th:text="${post.title}" class="card-title"></h5>
+                    <p th:text="${post.description}" class="card-text">.</p>
+                    <a th:href="@{/post/{id}(id=${post.id})}" class="btn btn-primary">Go somewhere</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+
+</body>
+</html>

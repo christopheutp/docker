@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en"  xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${post.title}" ></title>
+    <span th:replace="~{home :: bootstrapImports}"></span>
+</head>
+<body>
+<header>
+    <span th:replace="~{home :: navbar}"></span>
+</header>
+<main class="container">
+    <div class="container overflow-hidden">
+    <div class="row gy-5" th:object="${post}">
+        <div class="col-12">
+            <div class="row align-items-center gy-3 gy-md-0 gx-xl-5">
+                <div class="col-xs-12 col-md-6">
+                    <div>
+                        <h2 th:text="*{title}" class="h1 mb-3"></h2>
+                        <p th:text="*{description}" class="mb-4"></p>
+                        <p th:text="*{content}" class="mb-4"></p>
+                        <a class="btn btn-primary" th:href="@{/post/update(id=${post.id})}" target="_self">Modifier</a>
+                        <a class="btn btn-danger" th:href="@{/post/delete(id=${post.id})}" target="_self">Supprimer</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+    <hr>
+    <h3 th:if="${post.commentDtoList.isEmpty()}" >Pas de commentaires</h3>
+    <div th:if="${!post.commentDtoList.isEmpty()}" class="container overflow-hidden">
+        <div class="row gy-5" th:each="c : ${post.commentDtoList}">
+            <div class="col-12">
+                <div class="row align-items-center gy-3 gy-md-0 gx-xl-5">
+                    <div class="col-xs-12 col-md-6">
+                        <div>
+                            <p th:text="*{c.name}" class="mb-4"></p>
+                            <p th:text="*{c.email}" class="mb-4"></p>
+                            <p th:text="*{c.content}" class="mb-4"></p>
+                            <a class="btn btn-danger" th:href="@{/post/comment/delete(idPost=${post.id},idComment=*{c.id})}"  target="_self">Supprimer</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <hr>
+    <h2>Ajouter un Commentaire</h2>
+   <!-- <a class="btn btn-danger" th:href="@{/post/add/comment(id=${post.id})}" target="_self">Ajouter un commentaire</a> -->
+    <form th:action="@{/post/comment/add(id=${post.id})}" th:object="${comment}" method="post">
+        <input type="hidden" th:field="${post.id}">
+        <div class="mb-3">
+            <label for="exampleFormControlInput1" class="form-label">Nom :</label>
+            <input th:field="*{name}" type="text" class="form-control" id="exampleFormControlInput1" placeholder="Nom est prénom">
+        </div>
+        <div class="mb-3">
+            <label for="exampleFormControlInput2" class="form-label">Email</label>
+            <input th:field="*{email}" type="email" class="form-control" id="exampleFormControlInput2" placeholder="exemple@exemple.com">
+        </div>
+        <div class="mb-3">
+            <label for="exampleFormControlTextarea1" class="form-label">Contenu</label>
+            <textarea th:field="*{content}" class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+        </div>
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Ajouter</button>
+        </div>
+    </form>
+</main>
+</body>
+</html>
