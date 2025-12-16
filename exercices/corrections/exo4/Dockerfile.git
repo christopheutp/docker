@@ -1,0 +1,16 @@
+FROM nginx
+
+WORKDIR /usr/share/nginx/html
+
+RUN rm -rf ./*
+
+RUN apt update && apt install -y git
+
+RUN git clone https://github.com/withaarzoo/3D-Rotate-Tube .
+
+EXPOSE 80
+
+CMD ["nginx","-g","daemon off;"]
+
+# docker build -f Dockerfile.git -t rotategit .
+# docker run -p 8086:80 -d rotategit
