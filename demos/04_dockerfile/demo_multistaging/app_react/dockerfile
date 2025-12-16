@@ -45,4 +45,4 @@ CMD ["nginx","-g","daemon off;"]
 
 
 # # docker build -t monappreactmultistage .
-# # docker run -p 8090:3000 -d monappreactmultistage
+# # docker run -p 8090:80 -d monappreactmultistage
