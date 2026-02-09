@@ -1,0 +1,49 @@
+services:
+
+  init:
+    image: alpine
+    command: >
+      sh -c "echo 'Initialisation en cours...' && sleep 3 && echo 'Init terminée!'"
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: myapp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  
+  cache:
+    image: redis:alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+  
+  app:
+    image: alpine
+    command: >
+      sh -c "echo 'App démarrée - DB et Cache sont prêts!' && sleep infinity"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+
+  worker:
+    image: alpine
+    command: >
+      sh -c "echo 'Worker démarré après App' && sleep infinity"
+    depends_on:
+      app:
+        condition: service_started
+volumes:
+  db_data:

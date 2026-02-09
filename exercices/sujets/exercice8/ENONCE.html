@@ -1,0 +1,180 @@
+
+		<head>
+			<style type="text/css" media="screen">
+				body,html{font-family:var(--markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, "Ubuntu", "Droid Sans", sans-serif);font-size:var(--markdown-font-size,14px);padding:0 26px;line-height:var(--markdown-line-height,22px);word-wrap:break-word}body{padding-top:1em}h1,h2,h3,h4,h5,h6,ol,p,pre,ul{margin-top:0}h2,h3,h4,h5,h6{font-weight:400;margin-bottom:.2em}img{max-width:100%;max-height:100%}a{text-decoration:none}a:hover{text-decoration:underline}a:focus,input:focus,select:focus,textarea:focus{outline:1px solid -webkit-focus-ring-color;outline-offset:-1px}p{margin-bottom:.7em}ol,ul{margin-bottom:.7em}hr{border:0;height:2px;border-bottom:2px solid}h1{padding-bottom:.3em;line-height:1.2;border-bottom-width:1px;border-bottom-style:solid;font-weight:400}table{border-collapse:collapse}th{text-align:left;border-bottom:1px solid}td,th{padding:5px 10px}table>tbody>tr+tr>td{border-top:1px solid}blockquote{margin:0 7px 0 5px;padding:0 16px 0 10px;border-left-width:5px;border-left-style:solid}code{font-family:var(--vscode-editor-font-family, "SF Mono", Monaco, Menlo, Consolas, "Ubuntu Mono", "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace);font-size:1em;line-height:1.357em}body.wordWrap pre{white-space:pre-wrap}pre.hljs code>div,pre:not(.hljs){padding:16px;border-radius:3px;overflow:auto}pre code{color:var(--vscode-editor-foreground);tab-size:4}
+			</style>
+		</head>
+		<body>
+			<h1 id="tp-docker-compose---multi-services-networks-depends_on-et-healthchecks">TP Docker Compose - Multi-Services, Networks, Depends_on et Healthchecks</h1>
+<h2 id="objectif">Objectif</h2>
+<p>Maîtriser l&#39;orchestration de plusieurs services avec Docker Compose :</p>
+<ol>
+<li><strong>Multi-services</strong> : Application + Base de données + Cache + Adminer</li>
+<li><strong>Networks</strong> : Isolation et communication entre services</li>
+<li><strong>Depends_on</strong> : Ordre de démarrage avec conditions</li>
+<li><strong>Healthchecks</strong> : Vérification de l&#39;état des services</li>
+</ol>
+<hr>
+<h2 id="contexte">Contexte</h2>
+<p>Vous disposez d&#39;une application Spring Boot de gestion de produits (e-commerce simplifié).</p>
+<p>Votre mission : <strong>orchestrer cette application</strong> avec ses dépendances en utilisant les fonctionnalités avancées de Docker Compose.</p>
+<hr>
+<h2 id="architecture">Architecture</h2>
+<pre><code>┌──────────────────────────────────────────────────────────────────────┐
+│                         Docker Compose                                │
+│                                                                       │
+│  ┌─────────────────────────── frontend-network ───────────────────┐  │
+│  │                                                                 │  │
+│  │  ┌─────────────┐                          ┌─────────────┐      │  │
+│  │  │  Spring Boot│                          │   Adminer   │      │  │
+│  │  │    (app)    │                          │   (admin)   │      │  │
+│  │  │   :8080     │                          │   :8081     │      │  │
+│  │  └──────┬──────┘                          └──────┬──────┘      │  │
+│  │         │                                        │              │  │
+│  └─────────┼────────────────────────────────────────┼──────────────┘  │
+│            │                                        │                 │
+│  ┌─────────┼──────────────── backend-network ───────┼──────────────┐  │
+│  │         │                                        │              │  │
+│  │         ▼                                        ▼              │  │
+│  │  ┌─────────────┐                          ┌─────────────┐      │  │
+│  │  │ PostgreSQL  │                          │    Redis    │      │  │
+│  │  │    (db)     │◄─────────────────────────│   (cache)   │      │  │
+│  │  │   :5432     │                          │   :6379     │      │  │
+│  │  └─────────────┘                          └─────────────┘      │  │
+│  │                                                                 │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
+
+Flux de démarrage (depends_on + healthcheck) :
+   db (healthy) ──► cache (healthy) ──► app (started)
+                                            │
+                                            ▼
+                                        admin (started)
+</code></pre>
+<hr>
+<h2 id="spécifications">Spécifications</h2>
+<h3 id="services-à-configurer">Services à Configurer</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Image</th>
+<th>Port Externe</th>
+<th>Réseau(x)</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>app</code></td>
+<td>Build local</td>
+<td>8080</td>
+<td>frontend, backend</td>
+<td>Application Spring Boot</td>
+</tr>
+<tr>
+<td><code>db</code></td>
+<td>postgres:15-alpine</td>
+<td>- (interne)</td>
+<td>backend</td>
+<td>Base de données</td>
+</tr>
+<tr>
+<td><code>cache</code></td>
+<td>redis:7-alpine</td>
+<td>- (interne)</td>
+<td>backend</td>
+<td>Cache</td>
+</tr>
+<tr>
+<td><code>admin</code></td>
+<td>adminer</td>
+<td>8081</td>
+<td>frontend, backend</td>
+<td>Interface BDD</td>
+</tr>
+</tbody></table>
+<h3 id="réseaux">Réseaux</h3>
+<table>
+<thead>
+<tr>
+<th>Réseau</th>
+<th>Services</th>
+<th>Objectif</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>frontend-network</code></td>
+<td>app, admin</td>
+<td>Accès depuis l&#39;extérieur</td>
+</tr>
+<tr>
+<td><code>backend-network</code></td>
+<td>app, db, cache, admin</td>
+<td>Communication interne</td>
+</tr>
+</tbody></table>
+<h3 id="healthchecks">Healthchecks</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Commande de test</th>
+<th>Intervalle</th>
+<th>Retries</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>db</code></td>
+<td><code>pg_isready -U $USER -d $DB</code></td>
+<td>10s</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>cache</code></td>
+<td><code>redis-cli ping</code></td>
+<td>5s</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>app</code></td>
+<td><code>curl -f http://localhost:8080/actuator/health</code></td>
+<td>30s</td>
+<td>3</td>
+</tr>
+</tbody></table>
+<h3 id="ordre-de-démarrage-depends_on">Ordre de Démarrage (depends_on)</h3>
+<pre><code>db (service_healthy)
+    └──► cache (service_healthy)
+              └──► app (service_started)
+                       └──► admin (service_started)
+</code></pre>
+<hr>
+<h2 id="travail-à-réaliser">Travail à Réaliser</h2>
+<h3 id="créer-le--docker-composeyml">Créer le  docker-compose.yml</h3>
+<h3 id="critères-de-validation">Critères de Validation</h3>
+<h3 id="niveau-1--démarrage">Niveau 1 : Démarrage</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <code>docker compose up -d</code> démarre les 4 services sans erreur</li>
+<li><input disabled="" type="checkbox"> <code>docker compose ps</code> montre tous les services &quot;running&quot;</li>
+</ul>
+<h3 id="niveau-2--healthchecks">Niveau 2 : Healthchecks</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <code>docker compose ps</code> montre &quot;(healthy)&quot; pour db, cache et app</li>
+</ul>
+<h3 id="niveau-3--ordre-de-démarrage">Niveau 3 : Ordre de démarrage</h3>
+<ul>
+<li><input disabled="" type="checkbox"> Observer les logs : db démarre en premier, puis cache, puis app</li>
+<li><input disabled="" type="checkbox"> Si db n&#39;est pas healthy, app ne démarre pas</li>
+</ul>
+<h3 id="niveau-4--réseaux">Niveau 4 : Réseaux</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <code>docker network ls</code> montre les deux réseaux créés</li>
+</ul>
+<h3 id="niveau-5--isolation">Niveau 5 : Isolation</h3>
+<ul>
+<li><input disabled="" type="checkbox"> Adminer peut accéder à PostgreSQL (même réseau backend)</li>
+<li><input disabled="" type="checkbox"> L&#39;application communique avec db et cache</li>
+</ul>
+
+		</body>

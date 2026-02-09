@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret123
+      POSTGRES_DB: db_app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+
+  app:
+    image: nginx:alpine
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+  
+
+    
+

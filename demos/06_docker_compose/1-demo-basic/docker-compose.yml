@@ -1,0 +1,7 @@
+services:
+  web:
+    image: nginx:alpine
+    container_name: web-nginx
+    hostname: web-local
+    ports:
+      - 8080:80
