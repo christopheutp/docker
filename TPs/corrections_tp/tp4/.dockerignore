@@ -1,0 +1,36 @@
+# Dépendances
+node_modules
+npm-debug.log
+
+# Tests et développement
+*.test.js
+__tests__
+coverage
+.nyc_output
+
+# Configuration IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+*.md
+docs
+
+# Environnement
+.env*
+*.local
+
+# OS
+.DS_Store
+Thumbs.db

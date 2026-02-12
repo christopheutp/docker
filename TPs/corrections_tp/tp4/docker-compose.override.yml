@@ -1,0 +1,8 @@
+version: "3.9"
+
+services:
+  api:
+    volumes:
+      - ./api/app.js:/app/app.js
+    labels:
+      - "env=development"

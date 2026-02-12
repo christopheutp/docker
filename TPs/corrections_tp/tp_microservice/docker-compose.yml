@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop
+      POSTGRES_DB: shopdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks: [backend]
+
+  catalog-service:
+    build: ./services/catalog-service
+    networks: [backend]
+
+  order-service:
+    build: ./services/order-service
+    environment:
+      PGHOST: postgres
+      PGUSER: shop
+      PGPASSWORD: shop
+      PGDATABASE: shopdb
+    depends_on: [postgres]
+    networks: [backend]
+
+  ui:
+    build: ./frontend
+    networks: [backend]
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:80"
+    depends_on:
+      - catalog-service
+      - order-service
+      - ui
+    networks: [backend]
+
+networks:
+  backend:
+
+volumes:
+  pgdata:

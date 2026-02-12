@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  api:
+    volumes:
+      - ./api/app.js:/app/app.js
+    labels:
+      - "env=development"
+
+  db:
+    ports:
+      - "5432:5432"

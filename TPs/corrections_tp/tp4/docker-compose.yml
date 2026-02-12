@@ -1,0 +1,158 @@
+version: "3.9"
+
+secrets:
+  db_user:
+    file: ./secrets/db_user.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  db_name:
+    file: ./secrets/db_name.txt
+
+volumes:
+  db-data:
+  redis-data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  prod-network:
+    driver: bridge
+
+services:
+
+  db:
+    image: postgres:15-alpine
+    container_name: eval-db
+    secrets:
+      - db_user
+      - db_password
+      - db_name
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB_FILE: /run/secrets/db_name
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: eval-redis
+    volumes:
+      - redis-data:/data
+    networks:
+      - prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile.optimized
+    container_name: eval-api
+    secrets:
+      - db_user
+      - db_password
+      - db_name
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB_FILE: /run/secrets/db_name
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  nginx:
+    image: nginx:alpine
+    container_name: eval-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/index.html:/usr/share/nginx/html/index.html
+    depends_on:
+      - api
+    networks:
+      - prod-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["monitoring", "all"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    networks:
+      - prod-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    profiles: ["monitoring", "all"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8081:8080"
+    networks:
+      - prod-network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    profiles: ["monitoring", "all"]
+    ports:
+      - "9100:9100"
+    networks:
+      - prod-network
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["monitoring", "all"]
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    networks:
+      - prod-network

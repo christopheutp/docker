@@ -1,0 +1,39 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        run: docker compose build
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Wait for services
+        run: |
+          sleep 30
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost/health
+
+      - name: Run tests
+        run: |
+          curl -f http://localhost/api/users
+          curl -f http://localhost/api/stats
+
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'eval-api:latest'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
